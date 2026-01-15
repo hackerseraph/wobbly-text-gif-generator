@@ -230,18 +230,15 @@
                 const imageData = ctx.getImageData(0, 0, w, h);
                 gif.addFrame(imageData, { delay: 25 });
                 frameCount++;
-                console.log('Frame', frameCount, 'gifTick:', gifTick, 'sin:', Math.sin(gifTick));
 
                 if (frameCount < totalFrames) {
                     requestAnimationFrame(renderFrame);
                 } else {
-                    console.log('All frames done, rendering');
                     gif.render();
                 }
             }
 
             gif.on('finished', function(blob) {
-                console.log('GIF finished, blob size:', blob.size);
                 if (blob.size === 0) {
                     alert('GIF generation failed');
                     startLoop();
@@ -249,7 +246,6 @@
                 }
                 
                 const url = URL.createObjectURL(blob);
-                console.log('Created object URL:', url);
                 
                 const link = document.createElement('a');
                 link.href = url;
@@ -263,12 +259,10 @@
             });
 
             gif.on('error', function(error) {
-                console.error('GIF error:', error);
-                alert('Error generating GIF: ' + error);
+                alert('Error generating GIF');
                 startLoop();
             });
 
-            console.log('Starting GIF capture');
             renderFrame();
         }
 

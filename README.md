@@ -2,6 +2,8 @@
 
 A fun interactive web application that generates glitch-style wobbly text animations with customizable text input.
 
+![Demo](seraph.gif)
+
 ## Features
 
 - Type custom text (up to 10 characters)

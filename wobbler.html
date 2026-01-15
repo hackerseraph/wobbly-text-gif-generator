@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glitch Text Generator Final</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: none;
+            outline: none;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #5a86ce;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #a9f542;
+            color: #000;
+        }
+
+        canvas {
+            background-color: #1a1a1a;
+            image-rendering: pixelated; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <input type="text" id="userText" value="BRUH" maxlength="10">
+        <button onclick="updateText()">UPDATE</button>
+        <button onclick="downloadGif()">DOWNLOAD GIF</button>
+    </div>
+
+    <canvas id="glitchCanvas" width="500" height="300"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <script>
+        const canvas = document.getElementById('glitchCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Buffer Canvas (Hidden)
+        const bufferCanvas = document.createElement('canvas');
+        const bufferCtx = bufferCanvas.getContext('2d');
+        bufferCanvas.width = canvas.width;
+        bufferCanvas.height = canvas.height;
+
+        let animationId = null;
+        let currentText = "BRUH";
+        let tick = 0; // This is our "Time" variable for the wave
+
+        function drawCleanText(text) {
+            const w = bufferCanvas.width;
+            const h = bufferCanvas.height;
+            
+            bufferCtx.clearRect(0, 0, w, h);
+
+            // Font Sizing
+            const fontSize = text.length > 5 ? 110 : 160; 
+            bufferCtx.font = `900 ${fontSize}px Arial, Impact, sans-serif`;
+            bufferCtx.textAlign = 'center';
+            bufferCtx.textBaseline = 'middle';
+            
+            const x = w / 2;
+            const y = h / 2;
+
+            // Stroke
+            bufferCtx.lineWidth = 18;
+            bufferCtx.strokeStyle = 'black';
+            bufferCtx.lineJoin = 'round';
+            bufferCtx.strokeText(text, x, y);
+
+            // Gradient Fill
+            const gradient = bufferCtx.createLinearGradient(0, y - fontSize/2, 0, y + fontSize/2);
+            gradient.addColorStop(0, '#5a86ce'); 
+            gradient.addColorStop(0.5, '#7ec288'); 
+            gradient.addColorStop(1, '#a9f542'); 
+            
+            bufferCtx.fillStyle = gradient;
+            bufferCtx.fillText(text, x, y);
+        }
+
+        function startLoop() {
+            if (animationId) clearTimeout(animationId);
+
+            function loop() {
+                // Increment time. 
+                // Larger number = Faster wave speed
+                tick += 0.8; 
+
+                const w = canvas.width;
+                const h = canvas.height;
+                const cy = h / 2; 
+
+                // Define 4 exact zones centered around the text
+                const cut1 = cy - 40; 
+                const cut2 = cy;      
+                const cut3 = cy + 40; 
+
+                const zones = [
+                    { y: 0, h: cut1 },              // Top
+                    { y: cut1, h: cut2 - cut1 },    // Middle Top
+                    { y: cut2, h: cut3 - cut2 },    // Middle Bottom
+                    { y: cut3, h: h - cut3 }        // Bottom
+                ];
+
+                // Clear screen
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, w, h);
+
+                zones.forEach((zone, index) => {
+                    // THE WAVE MATH:
+                    // Math.sin(tick) gives us a number between -1 and 1 that loops smoothly.
+                    // adding "+ index" puts each row at a different point in the wave curve.
+                    const wavePhase = Math.sin(tick + index); 
+                    
+                    // Multiply by 25 to get pixel distance (Amplitude)
+                    const offset = wavePhase * 25; 
+
+                    ctx.drawImage(
+                        bufferCanvas, 
+                        0, zone.y, w, zone.h,     
+                        offset, zone.y, w, zone.h 
+                    );
+                });
+
+                // 100ms = 10fps. Looks chunky and retro.
+                animationId = setTimeout(() => {
+                    requestAnimationFrame(loop);
+                }, 100);
+            }
+            loop();
+        }
+
+        function updateText() {
+            currentText = document.getElementById('userText').value.toUpperCase() || "EMPTY";
+            drawCleanText(currentText);
+            startLoop();
+        }
+
+        function downloadGif() {
+            // Stop current animation
+            if (animationId) clearTimeout(animationId);
+
+            const gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: canvas.width,
+                height: canvas.height,
+                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+            });
+
+            // Capture 30 frames (3 seconds at 10fps)
+            let frameCount = 0;
+            const totalFrames = 30;
+
+            function captureFrame() {
+                // Increment time
+                tick += 0.8;
+
+                const w = canvas.width;
+                const h = canvas.height;
+                const cy = h / 2;
+
+                const cut1 = cy - 40;
+                const cut2 = cy;
+                const cut3 = cy + 40;
+
+                const zones = [
+                    { y: 0, h: cut1 },
+                    { y: cut1, h: cut2 - cut1 },
+                    { y: cut2, h: cut3 - cut2 },
+                    { y: cut3, h: h - cut3 }
+                ];
+
+                // Clear screen
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, w, h);
+
+                zones.forEach((zone, index) => {
+                    const wavePhase = Math.sin(tick + index);
+                    const offset = wavePhase * 25;
+
+                    ctx.drawImage(
+                        bufferCanvas,
+                        0, zone.y, w, zone.h,
+                        offset, zone.y, w, zone.h
+                    );
+                });
+
+                gif.addFrame(canvas, { delay: 100 });
+                frameCount++;
+
+                if (frameCount < totalFrames) {
+                    setTimeout(captureFrame, 100);
+                } else {
+                    gif.render();
+                }
+            }
+
+            gif.on('finished', function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentText + '.gif';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                // Resume animation
+                startLoop();
+            });
+
+            captureFrame();
+        }
+
+        // Initialize
+        updateText();
+    </script>
+</body>
+</html>

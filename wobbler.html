@@ -65,7 +65,7 @@
 
     <canvas id="glitchCanvas" width="500" height="300"></canvas>
 
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <script src="gif.js"></script>
     <script>
         const canvas = document.getElementById('glitchCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -173,21 +173,28 @@
             // Stop current animation
             if (animationId) clearTimeout(animationId);
 
+            // Check if GIF library is loaded
+            if (typeof GIF === 'undefined') {
+                alert('GIF library not loaded. Please wait and try again.');
+                startLoop();
+                return;
+            }
+
             const gif = new GIF({
                 workers: 2,
                 quality: 10,
                 width: canvas.width,
                 height: canvas.height,
-                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+                workerScript: 'gif.worker.js'
             });
 
-            // Capture 30 frames (3 seconds at 10fps)
+            // Capture full animation cycle
             let frameCount = 0;
-            const totalFrames = 30;
+            const totalFrames = 60;
+            let gifTick = 0;
 
-            function captureFrame() {
-                // Increment time
-                tick += 0.8;
+            function renderFrame() {
+                gifTick += 0.1;
 
                 const w = canvas.width;
                 const h = canvas.height;
@@ -209,7 +216,7 @@
                 ctx.fillRect(0, 0, w, h);
 
                 zones.forEach((zone, index) => {
-                    const wavePhase = Math.sin(tick + index);
+                    const wavePhase = Math.sin(gifTick + index);
                     const offset = wavePhase * 25;
 
                     ctx.drawImage(
@@ -219,31 +226,50 @@
                     );
                 });
 
-                gif.addFrame(canvas, { delay: 100 });
+                // Add frame to GIF - extract image data
+                const imageData = ctx.getImageData(0, 0, w, h);
+                gif.addFrame(imageData, { delay: 25 });
                 frameCount++;
+                console.log('Frame', frameCount, 'gifTick:', gifTick, 'sin:', Math.sin(gifTick));
 
                 if (frameCount < totalFrames) {
-                    setTimeout(captureFrame, 100);
+                    requestAnimationFrame(renderFrame);
                 } else {
+                    console.log('All frames done, rendering');
                     gif.render();
                 }
             }
 
             gif.on('finished', function(blob) {
+                console.log('GIF finished, blob size:', blob.size);
+                if (blob.size === 0) {
+                    alert('GIF generation failed');
+                    startLoop();
+                    return;
+                }
+                
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = currentText + '.gif';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                console.log('Created object URL:', url);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = currentText + '.gif';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-
-                // Resume animation
+                
                 startLoop();
             });
 
-            captureFrame();
+            gif.on('error', function(error) {
+                console.error('GIF error:', error);
+                alert('Error generating GIF: ' + error);
+                startLoop();
+            });
+
+            console.log('Starting GIF capture');
+            renderFrame();
         }
 
         // Initialize

@@ -4,6 +4,8 @@ A fun interactive web application that generates glitch-style wobbly text animat
 
 ![Demo](SERAPH.gif)
 
+**Live Demo:** https://hackerseraph.github.io/wobbly-text-gif-generator/wobbler.html
+
 ## Features
 
 - Type custom text (up to 10 characters)
@@ -42,3 +44,15 @@ Works in all modern browsers that support:
 - HTML5 Canvas
 - JavaScript ES6
 - Fetch API (for external script loading)
+
+## GitHub Pages Setup
+
+To enable the live demo on GitHub Pages:
+
+1. Go to your repository Settings
+2. Navigate to Pages (left sidebar)
+3. Under Source, select Deploy from a branch
+4. Select main branch and / (root) folder
+5. Click Save
+
+The site will be available at `https://hackerseraph.github.io/wobbly-text-gif-generator/wobbler.html`
